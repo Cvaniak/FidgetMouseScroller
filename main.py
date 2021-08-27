@@ -3,6 +3,8 @@ from pynput import mouse
 import time
 from collections import deque
 import tinydb
+import os
+import pygame
 
 
 class MyException(Exception):
@@ -35,14 +37,17 @@ class FidgetScroller:
                 sum(self.speed_list_of_speeds) / self.speed_list_size
             )
             self.speed_count = 0
-            self.speed_max = max([self.speed_max, self.speed_current, calc])
+            self.speed_max = max([self.speed_max, self.speed_current])
 
     def main(self):
         ls = mouse.Listener(on_scroll=self._on_scroll)
         ls.start()
 
         # ----------------  Create Window  ----------------
-        sg.theme("DarkAmber")
+        # sg.theme("DarkAmber")
+        # sg.theme("DarkGrey12")
+        # sg.theme("DarkBlue17")
+        # sg.theme("DarkGrey3")
         layout_c1 = [
             [
                 sg.Text(
@@ -79,7 +84,7 @@ class FidgetScroller:
                 sg.ProgressBar(
                     100,
                     orientation="v",
-                    size=(20, 20),
+                    size=(12, 20),
                     key="-PROG_1-",
                     bar_color=(sg.theme_progress_bar_color()),
                 )
@@ -91,13 +96,12 @@ class FidgetScroller:
                 sg.ProgressBar(
                     100,
                     orientation="v",
-                    size=(20, 20),
+                    size=(12, 20),
                     key="-PROG_2-",
                     bar_color=(sg.theme_progress_bar_color()),
                 )
             ]
         ]
-
         layout = [
             [
                 sg.Column(layout_c1, element_justification="center"),
@@ -106,12 +110,51 @@ class FidgetScroller:
             ]
         ]
 
+
+        layout_c4 = [[sg.TabGroup(
+            [[
+                sg.Tab(
+                    'Tab1',
+                    layout,
+                    key='tab_1'),
+
+                sg.Tab(
+                    'Tab2',
+                    [[]],
+                    key='tab_2')
+            ]],
+            key='tabgroup',
+            enable_events=True),
+            sg.Graph((199, 200), (0, 0), (200, 200),
+                    background_color='lightblue', key='-GRAPH-')
+        ]]
+
+
         window = sg.Window(
             "Fidget Mouse Scroller!",
-            layout,
+            layout_c4,
             auto_size_buttons=False,
             grab_anywhere=True,
+            finalize=True
         )
+
+        graph = window['-GRAPH-']           # type: sg.Graph
+        print(graph.__dict__)
+        embed = graph.TKCanvas
+        os.environ['SDL_WINDOWID'] = str(embed.winfo_id())
+        os.environ['SDL_VIDEODRIVER'] = 'windib'
+
+        # ----------------------------- PyGame Code -----------------------------
+        # Call this function so the Pygame library can initialize itself
+        pygame.init()
+        screen = pygame.display.set_mode((200, 200))
+        screen.fill(pygame.Color(255, 255, 255))
+
+        pygame.display.init()
+        pygame.display.update()
+
+        # Set the title of the window
+        # pygame.display.set_caption('Snake Example')
 
         while True:
             # --------- Read and update window --------
