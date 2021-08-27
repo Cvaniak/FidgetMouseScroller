@@ -4,7 +4,6 @@ import time
 from collections import deque
 import tinydb
 import os
-import pygame
 
 
 class MyException(Exception):
@@ -42,6 +41,16 @@ class FidgetScroller:
     def main(self):
         ls = mouse.Listener(on_scroll=self._on_scroll)
         ls.start()
+
+        def collapse(layout, key):
+            """
+            Helper function that creates a Column that can be later made hidden, thus appearing "collapsed"
+            :param layout: The layout for the section
+            :param key: Key used to make this seciton visible / invisible
+            :return: A pinned column that can be placed directly into your layout
+            :rtype: sg.pin
+            """
+            return sg.pin(sg.Column(layout, key=key, visible=False))
 
         # ----------------  Create Window  ----------------
         # sg.theme("DarkAmber")
@@ -102,59 +111,67 @@ class FidgetScroller:
                 )
             ]
         ]
-        layout = [
+        layout_tab_1 = [
             [
-                sg.Column(layout_c1, element_justification="center"),
-                sg.Column(layout_c2, element_justification="center"),
-                sg.Column(layout_c3, element_justification="center"),
+                sg.Column(layout_c1, element_justification="center", key="col_1"),
+                sg.Column(layout_c2, element_justification="center", key="col_2"),
+                sg.Column(layout_c3, element_justification="center", key="col_3"),
             ]
         ]
 
+        layout_tab_2 = [
+            [
+                collapse(
+                    [
+                        [
+                            sg.Graph(
+                                (300, 300),
+                                (0, 0),
+                                (300, 300),
+                                background_color="lightblue",
+                                key="-GRAPH-",
+                                visible=True,
+                            )
+                        ]
+                    ],
+                    "-SEC1-",
+                ),
+            ],
+            [
+                sg.Button("Play", key="-PLAY-"),
+            ],
+        ]
 
-        layout_c4 = [[sg.TabGroup(
-            [[
-                sg.Tab(
-                    'Tab1',
-                    layout,
-                    key='tab_1'),
-
-                sg.Tab(
-                    'Tab2',
-                    [[]],
-                    key='tab_2')
-            ]],
-            key='tabgroup',
-            enable_events=True),
-            sg.Graph((199, 200), (0, 0), (200, 200),
-                    background_color='lightblue', key='-GRAPH-')
-        ]]
-
+        layout_c4 = [
+            [
+                sg.TabGroup(
+                    [
+                        [
+                            sg.Tab("Stats", layout_tab_1, key="tab_1"),
+                            sg.Tab(
+                                "Game",
+                                layout_tab_2,
+                                key="tab_2",
+                            ),
+                        ]
+                    ],
+                    key="tabgroup",
+                    enable_events=True,
+                ),
+            ]
+        ]
 
         window = sg.Window(
             "Fidget Mouse Scroller!",
             layout_c4,
-            auto_size_buttons=False,
             grab_anywhere=True,
-            finalize=True
+            finalize=True,
+            resizable=True,
         )
-
-        graph = window['-GRAPH-']           # type: sg.Graph
-        print(graph.__dict__)
-        embed = graph.TKCanvas
-        os.environ['SDL_WINDOWID'] = str(embed.winfo_id())
-        os.environ['SDL_VIDEODRIVER'] = 'windib'
-
-        # ----------------------------- PyGame Code -----------------------------
-        # Call this function so the Pygame library can initialize itself
-        pygame.init()
-        screen = pygame.display.set_mode((200, 200))
-        screen.fill(pygame.Color(255, 255, 255))
-
-        pygame.display.init()
-        pygame.display.update()
-
-        # Set the title of the window
-        # pygame.display.set_caption('Snake Example')
+        a = 1
+        graph_size = window["-GRAPH-"].get_size()
+        print(graph_size)
+        opened1, opened2 = False, True
 
         while True:
             # --------- Read and update window --------
@@ -164,6 +181,18 @@ class FidgetScroller:
             if event == sg.WIN_CLOSED or event == "Exit":
                 break
 
+            if values["tabgroup"] == "tab_2" and a == 1:
+                opened1 = True
+                window["-SEC1-"].update(visible=opened1)
+                a = 0
+                print("as")
+
+            elif values["tabgroup"] == "tab_1" and a == 0:
+                opened1 = False
+                window["-SEC1-"].update(visible=opened1)
+                a = 1
+                print("asa")
+
             self.update_scroll()
             # --------- Display timer in window --------
 
@@ -172,6 +201,7 @@ class FidgetScroller:
             window["max_speed"].update(f"Max Speed\n{self.speed_max:03.0f} ticks/s")
             window["-PROG_1-"].update(self.speed_current, self.speed_max)
             window["-PROG_2-"].update(self.speed_current_avg, self.speed_max)
+            # window.refresh()
             # window["-PROG-"]._bar_color('red', sg.theme_background_color())
 
         # Broke out of main loop. Close the window.
